@@ -5,12 +5,22 @@
 #include<string>
 #include<sstream>
 
+static void GLClearError()
+{
+    while (glGetError() != GL_NO_ERROR);
+}
+static void GLCheckError()
+{
+    while (GLenum error = glGetError())
+    {
+        std::cout << "OPENGL ERROR " << error << std::endl;
+    }
+}
 struct ShaderProgramSource
 {
     std::string VertexSource;
     std::string FragmentSource;
 };
-
 static ShaderProgramSource ParseShader(const std::string& filepath)
 {
     std::ifstream stream(filepath);
@@ -34,12 +44,11 @@ static ShaderProgramSource ParseShader(const std::string& filepath)
             }
         else
         {
-            ss[(int)type] << line << "\n";
+            ss[int(type)] << line << "\n";
         }
     }
     return { ss[0].str(),ss[1].str() };
 }
-
 static unsigned int CompileShader(const std::string& source, unsigned int type)
 {
     unsigned int id = glCreateShader(GL_VERTEX_SHADER);
@@ -62,57 +71,62 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
             delete[] message;
             return 0;
         }
-
-
     return id;
 }
-static unsigned int CreateShader(const std::string& vertexShader, const std::string& frangmentShader)
+static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
     unsigned int program = glCreateProgram();
+    GLClearError();
     unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
-    unsigned int fs = CompileShader(frangmentShader, GL_FRAGMENT_SHADER);
-
+    unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER);
+    GLClearError();
     glAttachShader(program, vs);
     glAttachShader(program, fs);
     glLinkProgram(program);
     glValidateProgram(program);
-
     glDeleteShader(vs);
     glDeleteShader(fs);
 
     return program;
 }
-
 int main(void)
 {
     GLFWwindow* window;
 
-    /* Initialize the library */
     if (!glfwInit())
         return -1;
 
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(800, 600, "OPEN GL", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "OPEN GL", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
         return -1;
     }
-   
-    /* Make the window's context current */
+  
     glfwMakeContextCurrent(window);
     glewInit();
-    std::cout << glGetString(GL_VERSION) << std::endl;
-    float positions[6] = 
-    { 
+    std::cout <<"OPENGL DRIVER VERSION " << glGetString(GL_VERSION) << std::endl;
+    float positions[] =
+    {
         -0.5f, -0.5f,
-        0.0f, 0.5f,
-        0.5f, -0.5f 
+         0.5f, -0.5f,
+         0.5f, 0.5f,
+        -0.5f, 0.5f,
+    };
+    unsigned int indices[] =
+    {
+        0,1,2,
+        2,3,0,
     };
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float),positions,GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 4 *2* sizeof(float),positions,GL_STATIC_DRAW);
+
+    unsigned int Indexbuffer;
+    glGenBuffers(1, &Indexbuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Indexbuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
@@ -120,23 +134,18 @@ int main(void)
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
 
-    /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
-        /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES,6, GL_UNSIGNED_INT,nullptr);
        
-      
-        /* Swap front and back buffers */
         glfwSwapBuffers(window);
 
-        /* Poll for and process events */
         glfwPollEvents();
         glFlush();
     }
-    //glDeleteProgram(shader);
+
     glfwTerminate();
     glDeleteProgram(shader);
     return 0;
