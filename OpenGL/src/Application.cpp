@@ -4,17 +4,25 @@
 #include<fstream>
 #include<string>
 #include<sstream>
+#include"benchmark.h"
+
+#define ASSERT(x) if(!(x)) __debugbreak();
+#define GLCall(x) GLClearError();\
+    x;\
+ASSERT(GLLogCall(#x,__FILE__,__LINE__))
 
 static void GLClearError()
 {
     while (glGetError() != GL_NO_ERROR);
 }
-static void GLCheckError()
+static bool GLLogCall(const char* function,const char* file,int line)
 {
     while (GLenum error = glGetError())
     {
         std::cout << "OPENGL ERROR " << error << std::endl;
+        return false;
     }
+    return true;
 }
 struct ShaderProgramSource
 {
@@ -76,10 +84,9 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
 static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
     unsigned int program = glCreateProgram();
-    GLClearError();
     unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
     unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER);
-    GLClearError();
+   
     glAttachShader(program, vs);
     glAttachShader(program, fs);
     glLinkProgram(program);
@@ -91,12 +98,13 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 }
 int main(void)
 {
+    
     GLFWwindow* window;
 
     if (!glfwInit())
         return -1;
 
-    window = glfwCreateWindow(640, 480, "OPEN GL", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "OPEN GL", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -104,6 +112,7 @@ int main(void)
     }
   
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
     glewInit();
     std::cout <<"OPENGL DRIVER VERSION " << glGetString(GL_VERSION) << std::endl;
     float positions[] =
@@ -134,12 +143,25 @@ int main(void)
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
 
+    int location = glGetUniformLocation(shader, "u_Color");
+    //ASSERT(location != -1);
+    
+    float r = 0.0f;
+    float increment = 0.5f;
     while (!glfwWindowShouldClose(window))
     {
         glClear(GL_COLOR_BUFFER_BIT);
-
-        glDrawElements(GL_TRIANGLES,6, GL_UNSIGNED_INT,nullptr);
-       
+        glUniform4f(location, r, 0.3f, 0.8f, 1.0f);
+        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+        if (r > 1.0f)
+        {
+            increment = -0.05f;
+        }
+        else if (r < 0.0f)
+        {
+            increment = 0.05f;
+        }
+        r += increment;
         glfwSwapBuffers(window);
 
         glfwPollEvents();

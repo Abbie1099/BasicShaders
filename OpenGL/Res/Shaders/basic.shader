@@ -9,11 +9,11 @@ gl_Position = position;
 };
 
 #shader fragment
-version 410 core
+#version 410 core
 
-layout(location = 0) out vec4 color;
+uniform vec4 u_Color;
 
 void main()
 {
- color = vec4(0.2, 0.3, 0.8, 1.0);
+	color = u_Color;
 };
